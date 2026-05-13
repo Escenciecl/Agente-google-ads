@@ -1,0 +1,48 @@
+name: Google Ads AI Agent
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run agent
+        env:
+          GOOGLE_ADS_DEVELOPER_TOKEN: ${{ secrets.GOOGLE_ADS_DEVELOPER_TOKEN }}
+          GOOGLE_ADS_CLIENT_ID:       ${{ secrets.GOOGLE_ADS_CLIENT_ID }}
+          GOOGLE_ADS_CLIENT_SECRET:   ${{ secrets.GOOGLE_ADS_CLIENT_SECRET }}
+          GOOGLE_ADS_REFRESH_TOKEN:   ${{ secrets.GOOGLE_ADS_REFRESH_TOKEN }}
+          GOOGLE_ADS_CUSTOMER_ID:     ${{ secrets.GOOGLE_ADS_CUSTOMER_ID }}
+          GROQ_API_KEY:               ${{ secrets.GROQ_API_KEY }}
+          SUPABASE_URL:               ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:               ${{ secrets.SUPABASE_KEY }}
+          CAMPAIGN_IDS:               ${{ secrets.CAMPAIGN_IDS }}
+        run: python agent/main.py
+
+      - name: Deploy dashboard to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dashboard
+          keep_files: true
+          commit_message: "🤖 Agent update — ${{ github.run_id }}"
