@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Ads AI Agent</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e5e5e5;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.header-left h1{font-size:17px;font-weight:600}
+.header-left p{font-size:12px;color:#888;margin-top:2px}
+.status{display:flex;align-items:center;gap:6px;font-size:12px;color:#666}
+.dot-green{width:8px;height:8px;border-radius:50%;background:#4caf50}
+.container{max-width:1080px;margin:0 auto;padding:24px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:700px){.grid4{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:10px;border:1px solid #e5e5e5;padding:16px 20px}
+.kpi-label{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kpi-value{font-size:26px;font-weight:700;line-height:1}
+.kpi-sub{font-size:12px;color:#bbb;margin-top:4px}
+.card-title{font-size:13px;font-weight:600;color:#555;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.score-wrap{display:flex;align-items:center;gap:16px;margin-bottom:10px}
+.score-circle{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;flex-shrink:0;border:3px solid}
+.summary-text{font-size:13px;color:#444;line-height:1.7}
+.insight-item{border-left:3px solid #ddd;padding:8px 12px;margin-bottom:8px;border-radius:0 6px 6px 0;background:#fafafa}
+.insight-item.oportunidad{border-color:#4caf50;background:#f1f8e9}
+.insight-item.problema{border-color:#f44336;background:#fff5f5}
+.insight-item.tendencia{border-color:#2196f3;background:#e8f4fd}
+.insight-item.patron{border-color:#9c27b0;background:#f9f0ff}
+.insight-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.insight-desc{font-size:12px;color:#555;line-height:1.5}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;margin-top:5px;display:inline-block}
+.badge-alta{background:#ffebee;color:#c62828}
+.badge-media{background:#fff8e1;color:#f57f17}
+.badge-baja{background:#e8f5e9;color:#2e7d32}
+.action-row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f5f5f5}
+.action-num{width:22px;height:22px;border-radius:50%;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.action-text{font-size:13px;line-height:1.5}
+.action-why{font-size:11px;color:#999;margin-top:2px}
+.alert-item{border-radius:7px;padding:10px 14px;margin-bottom:8px;font-size:12px;border:1px solid}
+.alert-item.critica{background:#ffebee;border-color:#ffcdd2}
+.alert-item.alta{background:#fff8e1;border-color:#ffe082}
+.alert-item.media{background:#e3f2fd;border-color:#90caf9}
+.alert-name{font-weight:600;font-size:13px;margin-bottom:2px}
+.opp-card{border:1px solid #c8e6c9;border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#f9fef9}
+.opp-title{font-size:14px;font-weight:600;color:#2e7d32;margin-bottom:4px}
+.opp-body{font-size:12px;color:#555;line-height:1.5;margin-bottom:4px}
+.opp-meta{font-size:11px;color:#777}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;color:#999;font-weight:500;border-bottom:1px solid #eee;white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #f5f5f5;white-space:nowrap}
+td:first-child{font-weight:500;white-space:normal}
+.empty{color:#ccc;font-size:13px;padding:12px 0}
+.loading{color:#ccc;font-size:14px;text-align:center;padding:40px 0}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>🤖 Google Ads AI Agent</h1>
+    <p id="last-update">Cargando...</p>
+  </div>
+  <div class="status">
+    <div class="dot-green"></div>
+    <span>Actualiza cada hora · Supabase + GitHub Actions</span>
+  </div>
+</div>
+
+<div class="container">
+  <div id="app"><div class="loading">Cargando datos del agente...</div></div>
+</div>
+
+<script>
+async function load() {
+  try {
+    const res  = await fetch("data.json?_=" + Date.now());
+    const data = await res.json();
+    render(data);
+  } catch(e) {
+    document.getElementById("app").innerHTML =
+      '<p style="color:#f44336;padding:20px;">Error cargando datos. Verifica que el agente haya corrido al menos una vez.</p>';
+  }
+}
+
+function fmt(n, dec=0) {
+  if (n == null || isNaN(n)) return "-";
+  return Number(n).toLocaleString("es-CL", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtUSD(n) { return n ? "$" + fmt(n, 2) : "-"; }
+function fmtPct(n) { return n ? fmt(n, 2) + "%" : "-"; }
+
+function render(data) {
+  const a = data.analysis || {};
+  const c = data.campaigns || [];
+  const ts = data.generated_at
+    ? new Date(data.generated_at).toLocaleString("es-CL")
+    : "-";
+  document.getElementById("last-update").textContent = "Último análisis: " + ts;
+
+  // KPIs totales
+  const totals = c.reduce((acc, r) => {
+    acc.cost  += +r.total_cost  || 0;
+    acc.conv  += +r.total_conversions || 0;
+    acc.val   += +r.total_value || 0;
+    acc.clicks += +r.total_clicks || 0;
+    acc.impr  += +r.total_impressions || 0;
+    return acc;
+  }, { cost:0, conv:0, val:0, clicks:0, impr:0 });
+  const roas = totals.cost > 0 ? (totals.val / totals.cost).toFixed(2) : "0";
+  const cpa  = totals.conv > 0 ? (totals.cost / totals.conv).toFixed(2) : "0";
+  const ctr  = totals.impr > 0 ? (totals.clicks / totals.impr * 100).toFixed(2) : "0";
+
+  // Score color
+  const score = a.overall_score || 0;
+  const sc = score >= 70 ? "#4caf50" : score >= 40 ? "#ff9800" : "#f44336";
+  const sl = score >= 70 ? "Buen desempeño" : score >= 40 ? "Puede mejorar" : "Necesita atención";
+
+  document.getElementById("app").innerHTML = `
+    <div class="grid4">
+      <div class="card"><div class="kpi-label">Gasto total (7d)</div><div class="kpi-value">${fmtUSD(totals.cost)}</div><div class="kpi-sub">${fmt(totals.impr)} impresiones</div></div>
+      <div class="card"><div class="kpi-label">Conversiones</div><div class="kpi-value">${fmt(totals.conv)}</div><div class="kpi-sub">CTR ${ctr}%</div></div>
+      <div class="card"><div class="kpi-label">ROAS</div><div class="kpi-value">${roas}x</div><div class="kpi-sub">Valor: ${fmtUSD(totals.val)}</div></div>
+      <div class="card"><div class="kpi-label">CPA promedio</div><div class="kpi-value">${fmtUSD(cpa)}</div><div class="kpi-sub">${c.length} campañas</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">📊 Score general</div>
+        <div class="score-wrap">
+          <div class="score-circle" style="color:${sc};border-color:${sc};background:${sc}18">${score}</div>
+          <div>
+            <div style="font-weight:600;margin-bottom:4px;">${sl}</div>
+            <div class="summary-text">${a.period_summary || "Sin resumen disponible."}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚠️ Alertas</div>
+        ${renderAlerts(a.alerts || [])}
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">💡 Insights del agente</div>
+        ${renderInsights(a.insights || [])}
+      </div>
+      <div class="card">
+        <div class="card-title">🎯 Acciones recomendadas</div>
+        ${renderActions(a.recommended_actions || [])}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">🚀 Oportunidades de venta</div>
+      ${renderOpps(a.opportunities || [])}
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Campañas — últimos 7 días</div>
+      <div class="table-wrap">${renderTable(c)}</div>
+    </div>
+  `;
+}
+
+function renderAlerts(alerts) {
+  if (!alerts.length) return '<p style="color:#4caf50;font-size:13px;">✅ Sin alertas activas</p>';
+  return alerts.map(a => `
+    <div class="alert-item ${a.severidad}">
+      <div class="alert-name">${a.campana || a.campaña || ""} · <span style="font-weight:400">${a.problema}</span></div>
+      <div style="margin-top:3px;color:#555;">→ ${a.solucion}</div>
+    </div>`).join("");
+}
+
+function renderInsights(ins) {
+  if (!ins.length) return '<p class="empty">Sin insights aún.</p>';
+  return ins.map(i => `
+    <div class="insight-item ${i.tipo}">
+      <div class="insight-title">${i.titulo}</div>
+      <div class="insight-desc">${i.descripcion}</div>
+      <span class="badge badge-${i.urgencia}">${i.urgencia} urgencia</span>
+    </div>`).join("");
+}
+
+function renderActions(acts) {
+  if (!acts.length) return '<p class="empty">Sin acciones aún.</p>';
+  return acts.map(a => `
+    <div class="action-row">
+      <div class="action-num">${a.prioridad}</div>
+      <div>
+        <div class="action-text">${a.accion}</div>
+        <div class="action-why">${a.razon} · ${a.impacto_esperado}</div>
+      </div>
+    </div>`).join("");
+}
+
+function renderOpps(opps) {
+  if (!opps.length) return '<p class="empty">Sin oportunidades identificadas.</p>';
+  return opps.map(o => `
+    <div class="opp-card">
+      <div class="opp-title">${o.titulo}</div>
+      <div class="opp-body">${o.descripcion}</div>
+      <div class="opp-meta">Potencial: <strong>${o.potencial}</strong> · ${o.accion}</div>
+    </div>`).join("");
+}
+
+function renderTable(c) {
+  if (!c.length) return '<p class="empty">Sin datos de campañas.</p>';
+  const rows = c.map(r => `<tr>
+    <td>${r.campaign_name}</td>
+    <td>${fmt(r.total_impressions)}</td>
+    <td>${fmt(r.total_clicks)}</td>
+    <td>${fmtPct(r.avg_ctr)}</td>
+    <td>${fmtUSD(r.total_cost)}</td>
+    <td>${fmt(r.total_conversions, 0)}</td>
+    <td>${r.avg_roas > 0 ? fmt(r.avg_roas, 2) + "x" : "-"}</td>
+    <td>${r.avg_cpa > 0 ? fmtUSD(r.avg_cpa) : "-"}</td>
+  </tr>`).join("");
+  return `<table>
+    <thead><tr><th>Campaña</th><th>Impresiones</th><th>Clics</th><th>CTR</th><th>Gasto</th><th>Conv.</th><th>ROAS</th><th>CPA</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+load();
+setInterval(load, 5 * 60 * 1000); // Re-chequea cada 5 min
+</script>
+</body>
+</html>
