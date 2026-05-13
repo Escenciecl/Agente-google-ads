@@ -14,7 +14,7 @@ def check_env():
     required = [
         "GOOGLE_ADS_DEVELOPER_TOKEN", "GOOGLE_ADS_CLIENT_ID",
         "GOOGLE_ADS_CLIENT_SECRET",   "GOOGLE_ADS_REFRESH_TOKEN",
-        "GOOGLE_ADS_CUSTOMER_ID",     "ANTHROPIC_API_KEY",
+        "GOOGLE_ADS_CUSTOMER_ID",     "GROQ_API_KEY",
         "SUPABASE_URL",               "SUPABASE_KEY",
     ]
     missing = [k for k in required if not os.environ.get(k)]
@@ -24,7 +24,6 @@ def check_env():
 
 
 def generate_dashboard_data(analysis: dict, summaries: list):
-    """Genera el JSON que usará el dashboard de GitHub Pages."""
     os.makedirs("dashboard", exist_ok=True)
     payload = {
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -44,17 +43,14 @@ def main():
 
     check_env()
 
-    # 1. Recolectar métricas de Google Ads
     print("📡 PASO 1: Recolectando métricas...")
     from agent.collector import run as collect_run
     collect_run()
 
-    # 2. Analizar con Claude AI
-    print("\n🧠 PASO 2: Analizando con Claude AI...")
+    print("\n🧠 PASO 2: Analizando con Groq AI...")
     from agent.analyzer import run as analyze_run
     analysis = analyze_run()
 
-    # 3. Generar JSON para el dashboard
     print("\n📄 PASO 3: Actualizando dashboard...")
     from agent.database import get_campaigns_summary
     summaries = get_campaigns_summary(days=7)
